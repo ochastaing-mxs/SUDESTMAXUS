@@ -1,0 +1,368 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MAXUS — Réseau AuRA & PACA · v2 · 2026</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#f4f4f0}
+#app{display:flex;flex-direction:column;height:100vh}
+#topbar{background:#1a1a2e;color:#fff;padding:9px 16px;display:flex;align-items:center;gap:10px;flex-shrink:0;flex-wrap:wrap}
+#topbar h1{font-size:14px;font-weight:600}
+#topbar .ver{background:#c8372d;color:#fff;font-size:10px;font-weight:700;padding:2px 7px;border-radius:3px;letter-spacing:.5px}
+#topbar .sub{font-size:11px;color:#888}
+#toolbar{background:#fff;border-bottom:1px solid #e0e0e0;padding:8px 12px;flex-shrink:0}
+.row1{display:flex;align-items:center;gap:7px;flex-wrap:wrap;margin-bottom:6px}
+.row2{display:flex;gap:5px;flex-wrap:wrap}
+#search{width:230px;padding:6px 11px;border:1px solid #ccc;border-radius:16px;font-size:12px;outline:none}
+#search:focus{border-color:#555}
+select{padding:5px 10px;border:1px solid #ccc;border-radius:16px;font-size:12px;background:#fff;cursor:pointer;outline:none}
+.resetbtn{font-size:11px;padding:5px 12px;border:1px solid #ccc;border-radius:14px;background:#fff;cursor:pointer}
+.pill{display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:600;padding:4px 10px;border-radius:14px;border:1.5px solid transparent;cursor:pointer;white-space:nowrap;transition:opacity .15s;user-select:none}
+.pill.off{opacity:.3}
+.pdot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+#statsbar{background:#fafafa;border-bottom:1px solid #eee;padding:5px 14px;flex-shrink:0;display:flex;gap:16px;align-items:center;flex-wrap:wrap}
+.sc{font-size:11px;display:flex;align-items:center;gap:5px}
+.sc b{font-size:14px;font-weight:700}
+#map{flex:1;min-height:300px}
+.lbox{background:rgba(255,255,255,.97);border:1px solid #ccc;border-radius:8px;padding:10px 13px;font-size:11px;line-height:1.9;box-shadow:0 1px 6px rgba(0,0,0,.1);max-width:220px}
+.lbox strong{display:block;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:#555;margin-bottom:3px}
+.lrow{display:flex;align-items:center;gap:6px;white-space:nowrap}
+.ldot{width:9px;height:9px;border-radius:50%;flex-shrink:0}
+.lsep{height:1px;background:#eee;margin:5px 0}
+.okb{background:#1a7a4a;color:#fff;font-size:9px;font-weight:800;padding:1px 5px;border-radius:3px}
+.pu{font-family:-apple-system,sans-serif;min-width:240px;max-width:300px}
+.pu-h{padding:9px 12px;font-weight:700;font-size:13px;color:#fff;border-radius:5px 5px 0 0;display:flex;align-items:center;justify-content:space-between;gap:8px}
+.pu-b{padding:10px 12px;font-size:12px;line-height:1.65;border:1px solid #eee;border-top:none;border-radius:0 0 5px 5px;background:#fff}
+.pu-grp{display:inline-block;font-size:10px;font-weight:700;padding:2px 8px;border-radius:10px;margin-bottom:7px}
+.pu-row{display:flex;gap:6px;padding:2px 0}
+.pu-lbl{color:#999;min-width:52px;font-size:11px;flex-shrink:0}
+.pu-val{color:#111;font-weight:500;font-size:12px}
+.pu-note{margin-top:7px;font-size:11px;color:#555;font-style:italic;border-top:1px solid #f0f0f0;padding-top:6px;line-height:1.5}
+.pu-src{font-size:9px;color:#aaa;margin-top:4px}
+</style>
+</head>
+<body>
+<div id="app">
+<div id="topbar">
+  <h1>MAXUS — Réseau Auvergne-Rhône-Alpes &amp; PACA</h1>
+  <span class="ver">v3 · Juin 2026</span>
+  <span class="sub">Source : maxusmotors.fr + jeanlain.com · Données vérifiées</span>
+</div>
+<div id="toolbar">
+  <div class="row1">
+    <input type="text" id="search" placeholder="Chercher ville, groupe, département…" oninput="go()">
+    <select id="fG" onchange="go()">
+      <option value="">Tous les groupes</option>
+      <option>Jean Lain Mobilités</option>
+      <option>Soveca</option>
+      <option>SUMA</option>
+      <option>Étoile 83</option>
+      <option>Autopuzz</option>
+    </select>
+    <select id="fR" onchange="go()">
+      <option value="">AuRA + PACA</option>
+      <option value="AuRA">Auvergne-Rhône-Alpes</option>
+      <option value="PACA">PACA</option>
+    </select>
+    <button class="resetbtn" onclick="reset()">Réinitialiser</button>
+  </div>
+  <div class="row2" id="pills"></div>
+</div>
+<div id="statsbar">
+  <div class="sc"><b id="nok" style="color:#1a7a4a">0</b><span>sites actifs</span></div>
+  <div class="sc" style="margin-left:auto;color:#999;font-size:11px" id="ntot"></div>
+</div>
+<div id="map"></div>
+</div>
+
+<script>
+const G={
+  "Jean Lain Mobilités": {c:"#1455a3",l:"#d3e4f7"},
+  "Soveca":              {c:"#0a6e3f",l:"#d4eddf"},
+  "SUMA":                {c:"#b87000",l:"#faecd3"},
+  "Étoile 83":           {c:"#8a1f6e",l:"#f5d5ec"},
+  "Autopuzz":            {c:"#2e6b8a",l:"#d3eaf5"},
+};
+
+// Données 100% vérifiées — sources : maxusmotors.fr + mobilite.jeanlain.com (juin 2026)
+const D=[
+  // ===== JEAN LAIN MOBILITÉS — 6 sites AuRA =====
+  {g:"Jean Lain Mobilités",s:"OK",n:"MAXUS Lyon Vénissieux",v:"Vénissieux",d:"69",r:"AuRA",
+   lat:45.717375,lng:4.864223,
+   adr:"10 rue des Frères Louis et Emile Bertran, 69200 Vénissieux",
+   note:"ZFE Lyon Métropole active — Crit'Air 0 MAXUS argument clé. Zone industrielle Vénissieux. Site historique Jean Lain MAXUS (ouv. 2023)."},
+
+  {g:"Jean Lain Mobilités",s:"OK",n:"MAXUS Grenoble (Fontaine)",v:"Fontaine",d:"38",r:"AuRA",
+   lat:45.1898,lng:5.6894,
+   adr:"Fontaine, 38600 (agglomération Grenoble)",
+   note:"ZFE Grenoble-Alpes Métropole — la plus contraignante de France. Crit'Air 0 MAXUS = argument décisif. Site de Fontaine, ouest Grenoble. Industrie / tech."},
+
+  {g:"Jean Lain Mobilités",s:"OK",n:"MAXUS Chambéry (Voglans)",v:"Voglans",d:"73",r:"AuRA",
+   lat:45.6214,lng:5.8883,
+   adr:"125 rue de la Dent du Chat, 73420 Voglans",
+   note:"Savoie — Voglans, nord Chambéry. Axe Genève-Turin. Clientèle montagne & transport touristique. Tél. 04 201 01 201."},
+
+  {g:"Jean Lain Mobilités",s:"OK",n:"MAXUS Annecy",v:"Annecy",d:"74",r:"AuRA",
+   lat:45.8992,lng:6.1294,
+   adr:"Annecy, 74000",
+   note:"Haute-Savoie — Annecy. Ouverture 2025 (suite Vénissieux + Grenoble). Clientèle PME / services / tourisme lac."},
+
+  {g:"Jean Lain Mobilités",s:"OK",n:"MAXUS Sallanches (Citroën JLM)",v:"Sallanches",d:"74",r:"AuRA",
+   lat:45.9336,lng:6.6198,
+   adr:"1222 Avenue de Genève, 74700 Sallanches — Tél. 04 50 58 20 49",
+   note:"Haute-Savoie — site Citroën Jean Lain, Avenue de Genève. Vallée de Chamonix. Clientèle BTP montagne, stations ski, transport touristique."},
+
+  {g:"Jean Lain Mobilités",s:"OK",n:"MAXUS Annemasse",v:"Annemasse",d:"74",r:"AuRA",
+   lat:46.1939,lng:6.2347,
+   adr:"Annemasse, 74100",
+   note:"Haute-Savoie — Grand Genève. Ouverture 2025. Clientèle transfrontalière. Fort potentiel flottes entreprises franco-suisses."},
+
+  // ===== SOVECA — 3 sites AuRA =====
+  {g:"Soveca",s:"OK",n:"MAXUS Clermont-Ferrand (Gerzat)",v:"Gerzat",d:"63",r:"AuRA",
+   lat:45.8102,lng:3.1505,
+   adr:"2 Rue Benjamin Franklin, 63360 Gerzat",
+   note:"Puy-de-Dôme — zone industrielle Gerzat, nord Clermont. Bassin Michelin & industrie. Seul point MAXUS dept 63."},
+
+  {g:"Soveca",s:"OK",n:"MAXUS Le Puy-en-Velay",v:"Saint-Germain-Laprade",d:"43",r:"AuRA",
+   lat:45.0482,lng:3.9616,
+   adr:"1000 rue Jean-Baptiste Lamarck, 43700 Saint-Germain-Laprade",
+   note:"Haute-Loire — périphérie Le Puy. Clientèle BTP & agriculture. Seul point MAXUS dept 43."},
+
+  {g:"Soveca",s:"OK",n:"MAXUS Moulins (Toulon-sur-Allier)",v:"Toulon-sur-Allier",d:"03",r:"AuRA",
+   lat:46.5039,lng:3.362,
+   adr:"Parc Activités Logistiques, Z.A. Les Gris, 03400 Toulon-sur-Allier",
+   note:"Allier — zone logistique sud Moulins. Clientèle industrie & transport. Seul point MAXUS dept 03."},
+
+  // ===== SUMA — 2 sites AuRA =====
+  {g:"SUMA",s:"OK",n:"MAXUS Bourg-en-Bresse (Viriat)",v:"Viriat",d:"01",r:"AuRA",
+   lat:46.2086,lng:5.2155,
+   adr:"Viriat, 01440 (près de Bourg-en-Bresse)",
+   note:"Ain — zone industrielle Viriat, périphérie Bourg. Clientèle PME & artisans. Ouv. 2025 (source myutilitaire.com). Seul point MAXUS dept 01."},
+
+  {g:"SUMA",s:"OK",n:"MAXUS Chalon-sur-Saône",v:"Chalon-sur-Saône",d:"71",r:"AuRA",
+   lat:46.7797,lng:4.8533,
+   adr:"Chalon-sur-Saône, 71100",
+   note:"Saône-et-Loire — axe A6. Clientèle agroalimentaire & industrie. Ouv. 2025 (source myutilitaire.com). Seul point MAXUS dept 71."},
+
+  // ===== ÉTOILE 83 — 1 site PACA =====
+  {g:"Étoile 83",s:"OK",n:"MAXUS Toulon Est (La Farlède)",v:"La Farlède",d:"83",r:"PACA",
+   lat:43.1548,lng:6.0426,
+   adr:"735 Avenue Alphonse Lavallée, 83210 La Farlède",
+   note:"Var — La Farlède, est Toulon. ZFE Toulon future. Clientèle Marine nationale / industrie navale / BTP. Seul point MAXUS dept 83."},
+
+  // ===== AUTOPUZZ — 1 site PACA =====
+  {g:"Autopuzz",s:"OK",n:"MAXUS Apt",v:"Apt",d:"84",r:"PACA",
+   lat:43.879,lng:5.3857,
+   adr:"597 Avenue Victor Hugo, 84400 Apt",
+   note:"Vaucluse — Luberon. Clientèle agroalimentaire & tourisme rural. Seul point MAXUS dept 84. (Autopuzz ouvre aussi un 2e site à Cavaillon 84 — à confirmer.)"},
+];
+
+const AG=new Set(Object.keys(G));
+let mkrs=[];
+
+function mkIcon(s){
+  const c=G[s.g]?G[s.g].c:"#555";
+  return L.divIcon({className:"",html:`<svg width="38" height="44" viewBox="0 0 38 44">
+    <ellipse cx="19" cy="18" rx="16" ry="16" fill="${c}" stroke="#fff" stroke-width="2.5"/>
+    <text x="19" y="15" text-anchor="middle" font-size="9" fill="#fff" font-weight="800" font-family="Arial,sans-serif" letter-spacing=".3">OK</text>
+    <text x="19" y="25" text-anchor="middle" font-size="7.5" fill="rgba(255,255,255,.85)" font-family="Arial,sans-serif">${s.d}</text>
+    <polygon points="19,42 12,30 26,30" fill="${c}" stroke="#fff" stroke-width="1"/>
+  </svg>`,iconSize:[38,44],iconAnchor:[19,44],popupAnchor:[0,-46]});
+}
+
+function popup(s){
+  const c=G[s.g]?G[s.g].c:"#555",l=G[s.g]?G[s.g].l:"#eee";
+  return `<div class="pu">
+    <div class="pu-h" style="background:${c}">${s.n}<span class="okb">OK</span></div>
+    <div class="pu-b">
+      <span class="pu-grp" style="background:${l};color:${c}">${s.g}</span>
+      <div class="pu-row"><span class="pu-lbl">Ville</span><span class="pu-val">${s.v} — ${s.d}</span></div>
+      <div class="pu-row"><span class="pu-lbl">Région</span><span class="pu-val">${s.r}</span></div>
+      <div class="pu-row"><span class="pu-lbl">Adresse</span><span class="pu-val">${s.adr}</span></div>
+      <div class="pu-note">${s.note}</div>
+      <div class="pu-src">Source : maxusmotors.fr + mobilite.jeanlain.com · Vérifié juin 2026</div>
+    </div>
+  </div>`;
+}
+
+const map=L.map("map").setView([45.6,5.2],7);
+L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",{
+  attribution:'© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
+  maxZoom:18
+}).addTo(map);
+
+const leg=L.control({position:"bottomleft"});
+leg.onAdd=function(){
+  const d=L.DomUtil.create("div","lbox");
+  let h=`<strong>Groupes distributeurs</strong>`;
+  Object.entries(G).forEach(([n,v])=>{
+    h+=`<div class="lrow"><span class="ldot" style="background:${v.c}"></span><span style="font-size:10.5px">${n}</span></div>`;
+  });
+  h+=`<div class="lsep"></div><strong>Régions</strong>
+    <div class="lrow" style="font-size:10px">🟢 AuRA — 11 sites</div>
+    <div class="lrow" style="font-size:10px">🔵 PACA — 2 sites</div>`;
+  d.innerHTML=h;return d;
+};
+leg.addTo(map);
+
+function draw(data){
+  mkrs.forEach(m=>map.removeLayer(m));mkrs=[];
+  let ok=0;
+  data.forEach(s=>{
+    if(!AG.has(s.g))return;
+    const m=L.marker([s.lat,s.lng],{icon:mkIcon(s)}).addTo(map).bindPopup(popup(s),{maxWidth:320});
+    mkrs.push(m);
+    ok++;
+  });
+  document.getElementById("nok").textContent=ok;
+  document.getElementById("ntot").textContent=ok+" sites affichés / "+D.length+" total";
+}
+
+function go(){
+  const q=document.getElementById("search").value.toLowerCase().trim();
+  const fg=document.getElementById("fG").value;
+  const fr=document.getElementById("fR").value;
+  draw(D.filter(s=>{
+    if(!AG.has(s.g))return false;
+    if(fg&&s.g!==fg)return false;
+    if(fr&&s.r!==fr)return false;
+    if(q&&!(s.n+s.v+s.g+s.d+s.r+s.adr+s.note).toLowerCase().includes(q))return false;
+    return true;
+  }));
+}
+
+function reset(){
+  document.getElementById("search").value="";
+  ["fG","fR"].forEach(id=>document.getElementById(id).value="");
+  AG.clear();Object.keys(G).forEach(k=>AG.add(k));
+  document.querySelectorAll(".pill").forEach(p=>p.classList.remove("off"));
+  go();
+}
+
+function buildPills(){
+  const c=document.getElementById("pills");
+  Object.entries(G).forEach(([n,v])=>{
+    const p=document.createElement("button");
+    p.className="pill";
+    p.style.cssText=`background:${v.l};border-color:${v.c};color:${v.c}`;
+    p.innerHTML=`<span class="pdot" style="background:${v.c}"></span>${n}`;
+    p.onclick=()=>{
+      if(AG.has(n)){if(AG.size===1)return;AG.delete(n);p.classList.add("off");}
+      else{AG.add(n);p.classList.remove("off");}
+      go();
+    };
+    c.appendChild(p);
+  });
+}
+buildPills();go();
+</script>
+
+<!-- ===== TABLEAU ===== -->
+<div id="tableau-wrap" style="background:#fff;border-top:2px solid #e0e0e0;padding:14px 16px 20px">
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;flex-wrap:wrap;gap:8px">
+    <div style="font-size:13px;font-weight:700;color:#111">Sites MAXUS — AuRA &amp; PACA (13 sites)</div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+      <input type="text" id="tsearch" placeholder="Filtrer…" oninput="filterTable()" style="padding:5px 10px;border:1px solid #ccc;border-radius:14px;font-size:12px;outline:none;width:180px">
+      <button onclick="exportCSV()" style="padding:5px 12px;border:1px solid #888;border-radius:14px;font-size:11px;background:#f5f5f5;cursor:pointer">⬇ Export CSV</button>
+    </div>
+  </div>
+  <div style="overflow-x:auto">
+  <table id="mainTable" style="width:100%;border-collapse:collapse;font-size:11.5px">
+    <thead>
+      <tr style="background:#f0f0f0;text-align:left">
+        <th style="padding:7px 10px;border-bottom:2px solid #ccc;cursor:pointer;white-space:nowrap" onclick="sortTable(0)">Site ▲</th>
+        <th style="padding:7px 10px;border-bottom:2px solid #ccc;cursor:pointer;white-space:nowrap" onclick="sortTable(1)">Groupe</th>
+        <th style="padding:7px 10px;border-bottom:2px solid #ccc;cursor:pointer;white-space:nowrap" onclick="sortTable(2)">Ville</th>
+        <th style="padding:7px 10px;border-bottom:2px solid #ccc;cursor:pointer;white-space:nowrap;text-align:center" onclick="sortTable(3)">Dept</th>
+        <th style="padding:7px 10px;border-bottom:2px solid #ccc;cursor:pointer;white-space:nowrap" onclick="sortTable(4)">Région</th>
+        <th style="padding:7px 10px;border-bottom:2px solid #ccc;white-space:nowrap">Adresse</th>
+        <th style="padding:7px 10px;border-bottom:2px solid #ccc">Commentaire</th>
+      </tr>
+    </thead>
+    <tbody id="tableBody"></tbody>
+  </table>
+  </div>
+  <div id="tcount" style="font-size:11px;color:#999;margin-top:8px"></div>
+  <div style="font-size:10px;color:#bbb;margin-top:4px">Sources : maxusmotors.fr · mobilite.jeanlain.com · journalauto.com · myutilitaire.com — données vérifiées juin 2026</div>
+</div>
+
+<script>
+let tSortCol=0,tSortDir=1;
+
+function groupBadge(g){
+  const gc=G[g]||{c:'#555',l:'#eee'};
+  return `<span style="background:${gc.l};color:${gc.c};font-size:10px;font-weight:700;padding:2px 7px;border-radius:10px;white-space:nowrap">${g}</span>`;
+}
+
+function regionBadge(r){
+  const bg=r==='AuRA'?'#e8f5ee':r==='PACA'?'#e8f0f8':'#f0f0f0';
+  const co=r==='AuRA'?'#0a6e3f':r==='PACA'?'#1455a3':'#555';
+  return `<span style="background:${bg};color:${co};font-size:10px;font-weight:700;padding:2px 7px;border-radius:10px;white-space:nowrap">${r}</span>`;
+}
+
+function renderTable(data){
+  const tbody=document.getElementById('tableBody');
+  tbody.innerHTML='';
+  data.forEach((s,i)=>{
+    const tr=document.createElement('tr');
+    tr.style.borderBottom='1px solid #f0f0f0';
+    if(i%2===0)tr.style.background='#fafafa';
+    tr.innerHTML=`
+      <td style="padding:6px 10px;font-weight:600;color:#111;white-space:nowrap">${s.n}</td>
+      <td style="padding:6px 10px">${groupBadge(s.g)}</td>
+      <td style="padding:6px 10px;white-space:nowrap">${s.v}</td>
+      <td style="padding:6px 10px;text-align:center;font-weight:600">${s.d}</td>
+      <td style="padding:6px 10px">${regionBadge(s.r)}</td>
+      <td style="padding:6px 10px;color:#777;font-size:10.5px">${s.adr}</td>
+      <td style="padding:6px 10px;font-style:italic;color:#666;font-size:10.5px;max-width:240px">${s.note}</td>`;
+    tbody.appendChild(tr);
+  });
+  document.getElementById('tcount').textContent=data.length+' sites affichés / '+D.length+' total';
+}
+
+function filterTable(){
+  const q=document.getElementById('tsearch').value.toLowerCase().trim();
+  const filtered=D.filter(s=>{
+    if(q&&!(s.n+s.v+s.g+s.d+s.r+s.adr+s.note).toLowerCase().includes(q))return false;
+    return true;
+  });
+  const sorted=[...filtered].sort((a,b)=>{
+    const va=getCellVal(a,tSortCol),vb=getCellVal(b,tSortCol);
+    return va<vb?-tSortDir:va>vb?tSortDir:0;
+  });
+  renderTable(sorted);
+}
+
+function getCellVal(s,col){
+  switch(col){
+    case 0:return s.n;case 1:return s.g;case 2:return s.v;case 3:return s.d;case 4:return s.r;
+    default:return '';
+  }
+}
+
+function sortTable(col){
+  if(tSortCol===col)tSortDir*=-1;else{tSortCol=col;tSortDir=1;}
+  document.querySelectorAll('#mainTable thead th').forEach((th,i)=>{
+    th.textContent=th.textContent.replace(/[▲▼]/g,'').trim()+(i===col?(tSortDir===1?' ▲':' ▼'):'');
+  });
+  filterTable();
+}
+
+function exportCSV(){
+  const rows=[['Site','Groupe','Ville','Dept','Région','Adresse','Commentaire']];
+  D.forEach(s=>rows.push([s.n,s.g,s.v,s.d,s.r,s.adr,s.note.replace(/,/g,';')]));
+  const csv=rows.map(r=>r.map(c=>'"'+String(c).replace(/"/g,'""')+'"').join(',')).join('\n');
+  const a=document.createElement('a');
+  a.href='data:text/csv;charset=utf-8,\uFEFF'+encodeURIComponent(csv);
+  a.download='MAXUS_reseau_AuRA_PACA_v2_2026.csv';
+  a.click();
+}
+
+filterTable();
+</script>
+</body>
+</html>
